@@ -18,6 +18,7 @@ validParams<ZapdosEEDFRateConstant>()
       "file_location", "The name of the file that stores the reaction rate tables.");
   params.addCoupledVar("mean_energy", "The electron mean energy in log form.");
   params.addCoupledVar("electrons", "The electron density.");
+  params.addParam<bool>("log_form", true, "Are the densities using a log form?.");
   params.addParam<std::string>(
       "number",
       "",
@@ -34,6 +35,7 @@ ZapdosEEDFRateConstant::ZapdosEEDFRateConstant(const InputParameters & parameter
                                          getParam<std::string>("reaction"))),
     _d_k_d_en(declareProperty<Real>("d_k" + getParam<std::string>("number") + "_d_en_" +
                                     getParam<std::string>("reaction"))),
+    _log_form(getParam<bool>("log_form")),
     _em(isCoupled("electrons") ? coupledValue("electrons") : _zero),
     _mean_en(isCoupled("mean_energy") ? coupledValue("mean_energy") : _zero)
 {
@@ -68,7 +70,16 @@ ZapdosEEDFRateConstant::ZapdosEEDFRateConstant(const InputParameters & parameter
 void
 ZapdosEEDFRateConstant::computeQpProperties()
 {
-  Real actual_mean_energy = std::exp(_mean_en[_qp] - _em[_qp]);
+  Real actual_mean_energy;
+
+  if (_log_form)
+  {
+    actual_mean_energy = std::exp(_mean_en[_qp] - _em[_qp]);
+  }
+  else
+  {
+    actual_mean_energy = _mean_en[_qp] / _em[_qp];
+  }
 
   _reaction_rate[_qp] = _coefficient_interpolation.sample(actual_mean_energy);
 

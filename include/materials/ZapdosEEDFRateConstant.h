@@ -34,6 +34,7 @@ protected:
 
   MaterialProperty<Real> & _reaction_rate;
   MaterialProperty<Real> & _d_k_d_en;
+  bool _log_form;
   const VariableValue & _em;
   const VariableValue & _mean_en;
 };
