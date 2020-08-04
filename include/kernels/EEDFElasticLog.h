@@ -32,6 +32,10 @@ protected:
   const MaterialProperty<Real> & _reaction_coeff;
   const MaterialProperty<Real> & _massTarget;
   const MaterialProperty<Real> & _d_k_d_actual_mean_en;
+  const MaterialProperty<Real> & _e;
+  const MaterialProperty<Real> & _kb;
+  const MaterialProperty<Real> & _T_Target;
+  bool _use_temp_diff;
 
   const VariableValue & _em;
   unsigned int _em_id;

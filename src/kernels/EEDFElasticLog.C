@@ -19,6 +19,8 @@ validParams<EEDFElasticLog>()
   InputParameters params = validParams<Kernel>();
   params.addRequiredCoupledVar("electrons", "The electron density.");
   params.addRequiredCoupledVar("target", "The target species variable.");
+  params.addParam<bool>("use_temp_diff", false, "Is the difference between electron's and target's"
+                                                " temperature being used?.");
   params.addRequiredParam<std::string>("reaction",
                                        "Stores the name of the reaction (townsend) coefficient, "
                                        "unique to each individual reaction.");
@@ -39,6 +41,10 @@ EEDFElasticLog::EEDFElasticLog(const InputParameters & parameters)
     _massTarget(getMaterialProperty<Real>("mass" + (*getVar("target", 0)).name())),
     _d_k_d_actual_mean_en(getMaterialProperty<Real>("d_k" + getParam<std::string>("number") +
                                                     "_d_en_" + getParam<std::string>("reaction"))),
+    _e(getMaterialProperty<Real>("e")),
+    _kb(getMaterialProperty<Real>("k_boltz")),
+    _T_Target(getMaterialProperty<Real>("T" + (*getVar("target", 0)).name())),
+    _use_temp_diff(getParam<bool>("use_temp_diff")),
     _em(coupledValue("electrons")),
     _em_id(coupled("electrons")),
     _target(coupledValue("target")),
@@ -52,7 +58,17 @@ EEDFElasticLog::~EEDFElasticLog() {}
 Real
 EEDFElasticLog::computeQpResidual()
 {
-  Real Eel = -3.0 * _massem / _massTarget[_qp] * 2.0 / 3 * std::exp(_u[_qp] - _em[_qp]);
+  Real temp;
+  if (!_use_temp_diff)
+  {
+    temp = 2.0 / 3 * std::exp(_u[_qp] - _em[_qp]);
+  }
+  else
+  {
+    temp = (2.0 / 3 * std::exp(_u[_qp] - _em[_qp])) - (_kb[_qp] / _e[_qp] * _T_Target[_qp]);
+  }
+
+  Real Eel = -3.0 * _massem / _massTarget[_qp] * temp;
 
   return -_test[_i][_qp] * _reaction_coeff[_qp] * std::exp(_em[_qp] + _target[_qp]) * Eel;
 }
@@ -63,8 +79,20 @@ EEDFElasticLog::computeQpJacobian()
   Real d_actual_mean_en_d_mean_en = std::exp(_u[_qp] - _em[_qp]) * _phi[_j][_qp];
   Real d_k_d_mean_en = _d_k_d_actual_mean_en[_qp] * d_actual_mean_en_d_mean_en;
 
-  Real Eel = -3.0 * _massem / _massTarget[_qp] * 2.0 / 3 * std::exp(_u[_qp] - _em[_qp]);
-  Real d_Eel_d_mean_en = Eel * _phi[_j][_qp];
+  Real temp;
+  if (!_use_temp_diff)
+  {
+    temp = 2.0 / 3 * std::exp(_u[_qp] - _em[_qp]);
+  }
+  else
+  {
+    temp = (2.0 / 3 * std::exp(_u[_qp] - _em[_qp])) - (_kb[_qp] / _e[_qp] * _T_Target[_qp]);
+  }
+
+  Real Eel = -3.0 * _massem / _massTarget[_qp] * temp;
+
+  Real d_temp_d_mean_en = 2.0 / 3 * std::exp(_u[_qp] - _em[_qp]) * _phi[_j][_qp];
+  Real d_Eel_d_mean_en = -3.0 * _massem / _massTarget[_qp] * d_temp_d_mean_en;
 
   return -_test[_i][_qp] * std::exp(_em[_qp] + _target[_qp]) *
          (d_k_d_mean_en * Eel + _reaction_coeff[_qp] * d_Eel_d_mean_en);
@@ -76,9 +104,20 @@ EEDFElasticLog::computeQpOffDiagJacobian(unsigned int jvar)
   Real d_actual_mean_en_d_em = -std::exp(_u[_qp] - _em[_qp]) * _phi[_j][_qp];
   Real d_k_d_em = _d_k_d_actual_mean_en[_qp] * d_actual_mean_en_d_em;
 
-  Real Eel = -3.0 * _massem / _massTarget[_qp] * 2.0 / 3 * std::exp(_u[_qp] - _em[_qp]);
-  Real d_Eel_d_em =
-      -3.0 * _massem / _massTarget[_qp] * 2.0 / 3 * std::exp(_u[_qp] - _em[_qp]) * -_phi[_j][_qp];
+  Real temp;
+  if (!_use_temp_diff)
+  {
+    temp = 2.0 / 3 * std::exp(_u[_qp] - _em[_qp]);
+  }
+  else
+  {
+    temp = (2.0 / 3 * std::exp(_u[_qp] - _em[_qp])) - (_kb[_qp] / _e[_qp] * _T_Target[_qp]);
+  }
+  
+  Real Eel = -3.0 * _massem / _massTarget[_qp] * temp;
+
+  Real d_temp_d_em = 2.0 / 3 * std::exp(_u[_qp] - _em[_qp]) * -_phi[_j][_qp];
+  Real d_Eel_d_em = -3.0 * _massem / _massTarget[_qp] * d_temp_d_em;
 
   if (jvar == _em_id)
     return -_test[_i][_qp] *
