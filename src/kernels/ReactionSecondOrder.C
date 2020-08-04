@@ -113,7 +113,8 @@ ReactionSecondOrder::computeQpOffDiagJacobian(unsigned int jvar)
   }
   else if (!_v_eq_u && _w_eq_u)
   {
-    if (jvar == _w_id)
+    //if (jvar == _w_id)
+    if (jvar == _v_id)
       return -_test[_i][_qp] * _stoichiometric_coeff * _reaction_coeff[_qp] * _w[_qp] *
              _phi[_j][_qp];
     else

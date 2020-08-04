@@ -60,7 +60,10 @@ EEDFReactionLog::computeQpJacobian()
     Real actual_mean_en = std::exp(_mean_en[_qp] - _em[_qp]);
     Real d_k_d_em = _d_k_d_actual_mean_en[_qp] * actual_mean_en * -_phi[_j][_qp];
 
-    return -_test[_i][_qp] * std::exp(_em[_qp] + _target[_qp]) * d_k_d_em * _coefficient;
+    //Shouldn't this be a product rule, like in the Jacobian?
+    //return -_test[_i][_qp] * std::exp(_em[_qp] + _target[_qp]) * d_k_d_em * _coefficient;
+    return -_test[_i][_qp] * std::exp(_em[_qp] + _target[_qp]) * _coefficient *
+           (_reaction_coeff[_qp] * _phi[_j][_qp] + d_k_d_em);
   }
   else if (_var.number() == _target_id)
   {
@@ -84,10 +87,12 @@ EEDFReactionLog::computeQpOffDiagJacobian(unsigned int jvar)
   if (jvar == _mean_en_id)
     return -_test[_i][_qp] * std::exp(_em[_qp] + _target[_qp]) * d_k_d_mean_en * _coefficient;
 
-  else if (jvar == _em_id)
+  //else if (jvar == _em_id)
+  else if ((jvar == _em_id) && (_var.number() != _em_id))
     return -_test[_i][_qp] * std::exp(_em[_qp] + _target[_qp]) * _coefficient *
            (_reaction_coeff[_qp] * _phi[_j][_qp] + d_k_d_em);
-  else if (jvar == _target_id)
+  //else if (jvar == _target_id)
+  else if ((jvar == _target_id) && (_var.number() != _target_id))
     return -_test[_i][_qp] * std::exp(_em[_qp] + _target[_qp]) * _reaction_coeff[_qp] *
            _coefficient * _phi[_j][_qp];
 

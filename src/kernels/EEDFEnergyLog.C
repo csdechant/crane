@@ -62,11 +62,16 @@ EEDFEnergyLog::computeQpOffDiagJacobian(unsigned int jvar)
 
   if (jvar == _em_id)
   {
-    return -_test[_i][_qp] * d_k_d_em * _threshold_energy * std::exp(_em[_qp] + _target[_qp]);
+    //Shouldn't this be a product rule?
+    //return -_test[_i][_qp] * d_k_d_em * _threshold_energy * std::exp(_em[_qp] + _target[_qp]);
+    return -_test[_i][_qp] * _threshold_energy  * std::exp(_em[_qp] + _target[_qp]) *
+           (_reaction_coeff[_qp] * _phi[_j][_qp] + d_k_d_em);
   }
   else if (jvar == _target_id)
   {
-    return -_test[_i][_qp] * d_k_d_em * _threshold_energy * std::exp(_em[_qp] + _target[_qp]) *
+    //return -_test[_i][_qp] * d_k_d_em * _threshold_energy * std::exp(_em[_qp] + _target[_qp]) *
+    //       _phi[_j][_qp];
+    return -_test[_i][_qp] * _reaction_coeff[_qp] * _threshold_energy * std::exp(_em[_qp] + _target[_qp]) *
            _phi[_j][_qp];
   }
   else
